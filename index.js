@@ -1,6 +1,9 @@
-const express = require('express')
-const app = express()
-const cors = require('cors')
+require('dotenv').config();
+const express = require('express');
+const app = express();
+const { User } = require('./db/mongo');
+const cors = require('cors');
+const bcrypt = require("bcrypt");
 
 const PORT=4000
 
@@ -18,46 +21,71 @@ app.post('/api/auth/login', login)
 
 app.listen(PORT)
 
-const users = []
 
-function signUp(req, res) {
+async function signUp(req, res) {
     const body = req.body;
     console.log("body:", body);
     const email = req.body.email;
     const password = req.body.password;
 
-    const userInDb = users.find(user => user.email === email)
+    const userInDb = await User.findOne({
+        email: email
+    });
+    console.log("userInDb:", userInDb);
     if (userInDb != null) {
         res.status(400).send("User already exists")
         return
     }
     const user = {
         email: email,
-        password: password
+        password: hashPassword(password)
     };
-    users.push(user);
-    console.log("users:",users);
+    // users.push(user);
+    try{
+    await User.create(user);
+    } catch(e) {
+        console.error(e);
+        res.status(500).send("Something went wrong");
+        return;
+    }
     res.send("Sign Up");
 }
 
-function login(req, res) {
+async function login(req, res) {
     const body = req.body;
-    console.log("body:", body);
-    console.log("users in db:", users);
 
-    const userInDb = users.find(user => user.email === body.email);
+    const userInDb = await User.findOne({
+        email: body.email
+    });
+    console.log("userInDb:", userInDb);
     if (userInDb == null) {
-        res.status(400).send("User not found");
+        res.status(401).send("User not found");
         return;
     }
     const passwordInDb = userInDb.password;
-    if (passwordInDb != body.password) {
-        res.status(400).send("Wrong password");
+    if (!isPasswordCorrect(req.body.password, passwordInDb)) {
+        res.status(401).send("Wrong password");
         return;
     }
 
     res.send({
-        userId: "123",
+        userId: userInDb._id,
         token: "token"
     });
+}
+
+function hashPassword(password) {
+    console.log("password:", password);
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(password, salt);
+    console.log("hash:", hash);
+    return hash;
+}
+
+function isPasswordCorrect(password, hash) {
+    console.log("hash:", hash);
+    console.log("password:", password);
+    const isOk = bcrypt.compareSync(password, hash);
+    console.log("isOk:", isOk);
+    return isOk;
 }
