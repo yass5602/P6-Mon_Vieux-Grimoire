@@ -1,3 +1,4 @@
 node_modules
 resquest.http
 .env
+uploads/
