@@ -36,7 +36,7 @@ async function postRating(req, res) {
     ratingsInDb.push(newRating);
     book.averageRating = calculateAverageRating(ratingsInDb);
     await book.save();
-    res.send("Rating posted");
+    res.send(book);
   } catch (e) {
     console.error(e);
     res.status(500).send("Something went wrong:" + e.message);
