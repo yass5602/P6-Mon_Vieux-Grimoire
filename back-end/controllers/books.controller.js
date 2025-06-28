@@ -2,6 +2,8 @@ const { upload } = require("../middlewares/multer");
 const { Book } = require("../models/Book");
 const express = require("express");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const path = require("path");
 
 const booksRouter = express.Router();
 booksRouter.get("/bestrating", getBestRating);
@@ -82,7 +84,25 @@ async function putBook(req, res) {
     if (book.author) newBook.author = book.author;
     if (book.year) newBook.year = book.year;
     if (book.genre) newBook.genre = book.genre;
-    if (req.file != null) newBook.imageUrl = req.file.filename;
+    
+    // Si une nouvelle image est uploadée, supprimer l'ancienne
+    if (req.file != null) {
+      newBook.imageUrl = req.file.filename;
+      
+      // Supprimer l'ancienne image s'elle existe
+      if (bookInDb.imageUrl) {
+        const oldImagePath = path.join(String(process.env.IMAGES_FOLDER), bookInDb.imageUrl);
+        try {
+          if (fs.existsSync(oldImagePath)) {
+            fs.unlinkSync(oldImagePath);
+            console.log(`Ancienne image supprimée: ${oldImagePath}`);
+          }
+        } catch (imageError) {
+          console.error(`Erreur lors de la suppression de l'ancienne image: ${imageError.message}`);
+          // On continue même si la suppression de l'ancienne image échoue
+        }
+      }
+    }
 
     await Book.findByIdAndUpdate(id, newBook);
     res.send("Book updated");
@@ -106,6 +126,21 @@ async function deleteBook(req, res) {
       res.status(403).send("You cannot delete other people's books");
       return;
     }
+
+    // Supprimer le fichier image s'il existe
+    if (bookInDb.imageUrl) {
+      const imagePath = path.join(String(process.env.IMAGES_FOLDER), bookInDb.imageUrl);
+      try {
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+          console.log(`Image supprimée: ${imagePath}`);
+        }
+      } catch (imageError) {
+        console.error(`Erreur lors de la suppression de l'image: ${imageError.message}`);
+        // On continue même si la suppression de l'image échoue
+      }
+    }
+
     await Book.findByIdAndDelete(id);
     res.send("Book deleted");
   } catch (e) {

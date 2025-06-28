@@ -3,6 +3,8 @@ const bcrypt = require("bcrypt");
 const express = require("express");
 const jwt = require("jsonwebtoken");
 
+const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
 const usersRouter = express.Router();
 usersRouter.post("/signup", signUp);
 usersRouter.post("/login", login);
@@ -10,8 +12,15 @@ usersRouter.post("/login", login);
 async function signUp(req, res) {
   const email = req.body.email;
   const password = req.body.password;
+  
   if (email == null || password == null) {
     res.status(400).send("Email and password are required");
+    return;
+  }
+
+  // Validation du format email
+  if (!emailRegex.test(email)) {
+    res.status(400).send("Format d'email invalide");
     return;
   }
 
@@ -41,6 +50,13 @@ async function login(req, res) {
     res.status(400).send("Email and password are required");
     return;
   }
+  
+  // Validation du format email
+  if (!emailRegex.test(body.email)) {
+    res.status(400).send("Format d'email invalide");
+    return;
+  }
+  
   try {
     const userInDb = await User.findOne({
       email: body.email
