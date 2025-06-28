@@ -1,10 +1,15 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const limiter = require('../middlewares/rateLimiter.js')
 const app = express();
 require("./../db/mongo.js");
 
 const IMAGES_FOLDER = String(process.env.IMAGES_FOLDER);
+
+
+
+app.use(limiter);
 app.use(helmet.contentSecurityPolicy({
     directives: {
       defaultSrc: ["'self'"],

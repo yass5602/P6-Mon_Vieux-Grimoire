@@ -52,7 +52,7 @@ function calculateAverageRating(ratings) {
 
 async function getBestRating(req, res) {
   try {
-    const booksWithBestRatings = await Book.find().sort({ rating: -1 }).limit(3);
+    const booksWithBestRatings = await Book.find().sort({ averageRating: -1 }).limit(3);
     booksWithBestRatings.forEach((book) => {
       book.imageUrl = getAbsoluteImagePath(book.imageUrl);
     });
