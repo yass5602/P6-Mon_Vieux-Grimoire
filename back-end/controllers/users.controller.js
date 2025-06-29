@@ -25,13 +25,6 @@ async function signUp(req, res) {
   }
 
   try {
-    const userInDb = await User.findOne({
-      email: email
-    });
-    if (userInDb != null) {
-      res.status(400).send("Email already exists");
-      return;
-    }
     const user = {
       email,
       password: hashPassword(password)
@@ -40,6 +33,20 @@ async function signUp(req, res) {
     res.send("Sign up");
   } catch (e) {
     console.error(e);
+    
+    // Gestion spécifique des erreurs d'unicité
+    if (e.code === 11000) {
+      res.status(400).send("Cette adresse email est déjà utilisée");
+      return;
+    }
+    
+    // Gestion des erreurs de validation
+    if (e.name === 'ValidationError') {
+      const errorMessages = Object.values(e.errors).map(err => err.message);
+      res.status(400).send(errorMessages.join(', '));
+      return;
+    }
+    
     res.status(500).send("Something went wrong");
   }
 }
