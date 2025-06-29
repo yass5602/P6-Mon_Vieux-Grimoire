@@ -1,4 +1,5 @@
 const { upload } = require("../middlewares/multer");
+const { processImage } = require("../middlewares/imageProcessor");
 const { Book } = require("../models/Book");
 const express = require("express");
 const jwt = require("jsonwebtoken");
@@ -9,9 +10,9 @@ const booksRouter = express.Router();
 booksRouter.get("/bestrating", getBestRating);
 booksRouter.get("/:id", getBookById);
 booksRouter.get("/", getBooks);
-booksRouter.post("/", checkToken, upload.single("image"), postBook);
+booksRouter.post("/", checkToken, upload.single("image"), processImage, postBook);
 booksRouter.delete("/:id", checkToken, deleteBook);
-booksRouter.put("/:id", checkToken, upload.single("image"), putBook);
+booksRouter.put("/:id", checkToken, upload.single("image"), processImage, putBook);
 booksRouter.post("/:id/rating", checkToken, postRating);
 
 async function postRating(req, res) {
@@ -91,7 +92,12 @@ async function putBook(req, res) {
       
       // Supprimer l'ancienne image s'elle existe
       if (bookInDb.imageUrl) {
-        const oldImagePath = path.join(String(process.env.IMAGES_FOLDER), bookInDb.imageUrl);
+        // Gérer les images traitées avec le préfixe "processed_"
+        const oldImageFilename = bookInDb.imageUrl.startsWith('processed_') 
+          ? bookInDb.imageUrl 
+          : `processed_${bookInDb.imageUrl}`;
+        
+        const oldImagePath = path.join(String(process.env.IMAGES_FOLDER), oldImageFilename);
         try {
           if (fs.existsSync(oldImagePath)) {
             fs.unlinkSync(oldImagePath);
@@ -129,7 +135,12 @@ async function deleteBook(req, res) {
 
     // Supprimer le fichier image s'il existe
     if (bookInDb.imageUrl) {
-      const imagePath = path.join(String(process.env.IMAGES_FOLDER), bookInDb.imageUrl);
+      // Gérer les images traitées avec le préfixe "processed_"
+      const imageFilename = bookInDb.imageUrl.startsWith('processed_') 
+        ? bookInDb.imageUrl 
+        : `processed_${bookInDb.imageUrl}`;
+      
+      const imagePath = path.join(String(process.env.IMAGES_FOLDER), imageFilename);
       try {
         if (fs.existsSync(imagePath)) {
           fs.unlinkSync(imagePath);
@@ -215,7 +226,9 @@ async function getBooks(req, res) {
 }
 
 function getAbsoluteImagePath(fileName) {
-  return process.env.PUBLIC_URL + "/" + process.env.IMAGES_PUBLIC_URL + "/" + fileName;
+  // Encoder le nom de fichier pour les caractères spéciaux
+  const encodedFileName = encodeURIComponent(fileName);
+  return process.env.PUBLIC_URL + "/" + process.env.IMAGES_PUBLIC_URL + "/" + encodedFileName;
 }
 
 module.exports = { booksRouter };
